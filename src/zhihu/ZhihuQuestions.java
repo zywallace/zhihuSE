@@ -4,8 +4,6 @@ import java.io.File;
 import java.sql.Connection;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.lionsoul.jcseg.analyzer.v4x.JcsegAnalyzer4X;
@@ -15,12 +13,12 @@ import util.Index;
 import util.Mysql;
 
 public class ZhihuQuestions {
+	//question索引写入
 	public static void main(String args[]) throws Exception {
 		//System.setOut(new PrintStream(new FileOutputStream("output_Questions.txt")));
 		
 		String db = "python_test";
 		String table = "questions";
-
 		Mysql lucene = new Mysql(db);
 		Connection conn = lucene.getConnection();
 		// 把lucene的索引文件保存到硬盘
@@ -33,12 +31,6 @@ public class ZhihuQuestions {
 		config.setAppendCJKSyn(true);
 		// 初始化写入配置
 		String sql = "SELECT * FROM " + table;
-		//Index.indexWrite(dir, analyzer, conn, sql);
-
-		IndexReader reader = DirectoryReader.open(dir);
-		//Index.printAllIndexedTerms(reader);
-
-
+		Index.indexWrite(dir, analyzer, conn, sql);
 	}
-
 }
