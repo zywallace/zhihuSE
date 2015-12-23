@@ -47,7 +47,7 @@ import org.lionsoul.jcseg.analyzer.v4x.JcsegAnalyzer4X;
 import org.lionsoul.jcseg.tokenizer.core.JcsegTaskConfig;
 import org.apache.lucene.queryparser.classic.QueryParserBase;
 
-public class Index {
+public class Indexrevised {
 
 	public static boolean isindexedField(String field) {
 		// 判断是否是需要全文检索即生成index的field
@@ -184,6 +184,7 @@ public class Index {
 		}
 		sc.close();
 	}
+	
 
 	public static void queryTest(IndexReader reader_users, IndexReader reader_questions, IndexReader reader_answers,
 			Analyzer analyzer) throws ParseException, IOException, InvalidTokenOffsetsException {
@@ -218,20 +219,29 @@ public class Index {
 		TopDocs docs = searcher.search(customQuery, hitsPerPage);
 		ScoreDoc[] hits = docs.scoreDocs;
 		// 输出找到用户的url+name
-
+		Highlighter highlighter = null;
+		SimpleHTMLFormatter simpleHTMLFormatter = new SimpleHTMLFormatter(Print.ANSI_RED, Print.ANSI_RESET);
+		highlighter = new Highlighter(simpleHTMLFormatter, new QueryScorer(q));
+		// 这个100是指定关键字字符串的context的长度，你可以自己设定，因为不可能返回整篇正文内容
+		highlighter.setTextFragmenter(new SimpleFragmenter(140));
+		
 		Print.printRedln("Found " + hits.length + " users.\n");
 		for (int i = 0; i < hits.length; i++) {
 			int docId = hits[i].doc;
 			// float docValue = hits[i].score;
 			Document d = searcher.doc(docId);
-			System.out.println((i + 1) + ". " + d.get("url"));
+			System.out.println((i + 1) + ". " + d.get("url") );
 			String name = d.get("name");
-			System.out.println(name);
-			if (MyScore.isHit(d))
+			TokenStream tokenStreamt = new JcsegAnalyzer4X(JcsegTaskConfig.COMPLEX_MODE).tokenStream("token",
+					new StringReader(name));
+			System.out.println(highlighter.getBestFragment(tokenStreamt, name));
+			if (MyScore.isHit(d)) {
 				System.out.println("该用户可能是大V哦~");
+			}
+			System.out.println();
 		}
-		System.out.println();
 	}
+	
 
 	public static void searchAnswers(IndexReader reader, Analyzer analyzer, String querystr, Set<String> questions_urls)
 			throws ParseException, IOException, InvalidTokenOffsetsException {
@@ -245,7 +255,13 @@ public class Index {
 		IndexSearcher searcher = new IndexSearcher(reader);
 		TopDocs docs = searcher.search(customQuery, hitsPerPage);
 		ScoreDoc[] hits = docs.scoreDocs;
-
+		
+		Highlighter highlighter = null;
+		SimpleHTMLFormatter simpleHTMLFormatter = new SimpleHTMLFormatter(Print.ANSI_RED, Print.ANSI_RESET);
+		highlighter = new Highlighter(simpleHTMLFormatter, new QueryScorer(q));
+		// 这个100是指定关键字字符串的context的长度，你可以自己设定，因为不可能返回整篇正文内容
+		highlighter.setTextFragmenter(new SimpleFragmenter(140));
+		
 		Print.printRedln("Found " + hits.length + " answers.\n");
 		for (int i = 0; i < hits.length; i++) {
 			int docId = hits[i].doc;
@@ -254,12 +270,16 @@ public class Index {
 			String url = d.get("url");
 			System.out.println((i + 1) + ". " + url);
 			String content = d.get("content");
+			TokenStream tokenStream = new JcsegAnalyzer4X(JcsegTaskConfig.COMPLEX_MODE).tokenStream("token",
+					new StringReader(content));
+			System.out.println(highlighter.getBestFragment(tokenStream, content));
+			
+			/***
 			int endIndex = 140 > content.length() ? content.length() : 140;
 			String snippet = content.substring(0, endIndex);
 			System.out.println(snippet);
-			if (MyScore.isHit(d))
-				System.out.println("该答案可能是热门答案哦~");
 			System.out.println();
+			***/
 		}
 		/***
 		 * 与问题进行比对，如果该答案的question_url出现在questions_url中，则输出该答案，否则则不输出。
@@ -307,6 +327,13 @@ public class Index {
 		ScoreDoc[] hits = docs.scoreDocs;
 		// 结果输出前10个，输出找的的问题的url、标题、加上问题描述的前140个字
 		Print.printRedln("Found " + hits.length + " questions.\n");
+		
+		Highlighter highlighter = null;
+		SimpleHTMLFormatter simpleHTMLFormatter = new SimpleHTMLFormatter(Print.ANSI_RED, Print.ANSI_RESET);
+		highlighter = new Highlighter(simpleHTMLFormatter, new QueryScorer(query));
+		// 这个100是指定关键字字符串的context的长度，你可以自己设定，因为不可能返回整篇正文内容
+		highlighter.setTextFragmenter(new SimpleFragmenter(140));
+		
 		Set<String> urls = new HashSet<String>();
 		for (int i = 0; i < hits.length; i++) {
 			int docId = hits[i].doc;
@@ -315,20 +342,25 @@ public class Index {
 			String url = d.get("url");
 			urls.add(url);
 			System.out.println((i + 1) + ". " + url);
-
+			
 			String title = d.get("title");
-			System.out.println(title);
-
+			TokenStream tokenStreamt = new JcsegAnalyzer4X(JcsegTaskConfig.COMPLEX_MODE).tokenStream("token",
+					new StringReader(title));
+			System.out.println(highlighter.getBestFragment(tokenStreamt, title));
+			
 			String content = d.get("content");
 			if (content.length() != 0) {
+				TokenStream tokenStream = new JcsegAnalyzer4X(JcsegTaskConfig.COMPLEX_MODE).tokenStream("token",
+						new StringReader(content));
+				System.out.println(highlighter.getBestFragment(tokenStream, content));
+				/***
 				int endIndex = 140 > content.length() ? content.length() : 140;
 				String snippet = content.substring(0, endIndex);
 				System.out.println(snippet);
+				***/
 			} else {
 				System.out.println("#没有问题描述");
 			}
-			if (MyScore.isHit(d))
-				System.out.println("该问题可能是热门问题哦~");
 			System.out.println();
 		}
 		return urls;
